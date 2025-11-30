@@ -6,12 +6,12 @@ export interface ModelInput {
   profit: number[];
   rel_perturb: number;
 }
-
 export interface AnalysisOutput {
   x_base: number[];
   kappa: number;
   profit_base: number;
-  profit_pert: number;
+  profit_pert_pessimistic: number; // NOVO
+  profit_pert_optimistic: number; // NOVO
   rel_dx: number;
   rel_db: number;
   bound: number;
@@ -26,4 +26,3 @@ export interface AnalysisOutput {
     rel_dx_ill?: number;
   };
 }
-
