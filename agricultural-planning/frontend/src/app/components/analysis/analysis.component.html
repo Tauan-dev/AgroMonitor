@@ -1,0 +1,156 @@
+<div class="container">
+  <h1>Análise de Planejamento Agrícola</h1>
+
+  <!-- PARÂMETROS -->
+  <div class="input-section">
+    <h2>Parâmetros</h2>
+    <p>Observando os parametros de analise, temos 5% como nossa base de comparação.</p>
+    <div class="form-group">
+      <label>Perturbação Relativa (%)</label>
+      <input
+        type="range"
+        min="0.01"
+        max="0.30"
+        step="0.01"
+        [value]="input.rel_perturb"
+        (change)="updatePerturbation($any($event.target).value)"
+      />
+      <span>{{ (input.rel_perturb * 100).toFixed(1) }}%</span>
+    </div>
+
+    <button (click)="analyze()" [disabled]="loading" class="btn-primary">
+      {{ loading ? "Analisando..." : "Executar Análise" }}
+    </button>
+  </div>
+
+  <!-- ERRO -->
+  <div *ngIf="error" class="alert alert-error">
+    {{ error }}
+  </div>
+
+  <!-- RESULTADOS (só se houver result) -->
+  <ng-container *ngIf="result as r">
+    <div class="results-section">
+      <h2>Resultados</h2>
+
+      <!-- MÉTRICAS -->
+      <div class="metrics">
+        <div class="metric-card">
+          <h3>Lucro Estimado</h3>
+          <p class="value">
+            Base:
+            {{
+              r.profit_base !== undefined
+                ? r.profit_base.toLocaleString("pt-BR", {
+                    maximumFractionDigits: 2
+                  })
+                : ""
+            }}
+          </p>
+          <p class="value">
+            Perturbado:
+            {{
+              r.profit_pert !== undefined
+                ? r.profit_pert.toLocaleString("pt-BR", {
+                    maximumFractionDigits: 2
+                  })
+                : ""
+            }}
+          </p>
+        </div>
+
+        <div class="metric-card">
+          <h3>Condicionamento (κ)</h3>
+          <p class="value">
+            {{ r.kappa !== undefined ? r.kappa.toExponential(2) : "" }}
+          </p>
+          <p class="description">
+            {{
+              r.kappa < 1e2
+                ? "Bem"
+                : r.kappa < 1e4
+                ? "Moderado"
+                : "Mal"
+            }}
+            condicionado
+          </p>
+        </div>
+
+        <div class="metric-card">
+          <h3>Sensibilidade (||Δx||/||x||)</h3>
+          <p class="value">
+            {{ r.rel_dx !== undefined ? r.rel_dx.toExponential(2) : "" }}
+          </p>
+        </div>
+      </div>
+
+      <!-- GRÁFICOS -->
+      <div class="charts">
+        <div class="chart">
+          <h3>Heatmap de Sensibilidade</h3>
+          <img
+            *ngIf="r.heatmap"
+            [src]="'data:image/png;base64,' + r.heatmap"
+            alt="Heatmap"
+          />
+        </div>
+
+        <div class="chart">
+          <h3>Áreas Base vs Perturbada</h3>
+          <img
+            *ngIf="r.comparison"
+            [src]="'data:image/png;base64,' + r.comparison"
+            alt="Comparison"
+          />
+        </div>
+
+        <div class="chart">
+          <h3>Sensibilidade Bem vs Mal Condicionado</h3>
+          <img
+            *ngIf="r.sensitivity"
+            [src]="'data:image/png;base64,' + r.sensitivity"
+            alt="Sensitivity"
+          />
+        </div>
+
+        <div class="chart">
+          <h3>Normal vs Regularizado</h3>
+          <img
+            *ngIf="r.regularization"
+            [src]="'data:image/png;base64,' + r.regularization"
+            alt="Regularization"
+          />
+        </div>
+      </div>
+
+      <!-- DIAGNÓSTICOS -->
+      <div class="diagnostics" *ngIf="r.diagnostics as d">
+        <h3>Diagnósticos</h3>
+        <ul>
+          <li>
+            κ(bem) =
+            {{
+              d.kappa_well !== undefined ? d.kappa_well.toExponential(2) : ""
+            }}
+          </li>
+          <li>
+            κ(mal) =
+            {{ d.kappa_ill !== undefined ? d.kappa_ill.toExponential(2) : "" }}
+          </li>
+          <li>
+            ||Δx||/||x|| (bem) =
+            {{
+              d.rel_dx_well !== undefined ? d.rel_dx_well.toExponential(2) : ""
+            }}
+          </li>
+          <li>
+            ||Δx||/||x|| (mal) =
+            {{
+              d.rel_dx_ill !== undefined ? d.rel_dx_ill.toExponential(2) : ""
+            }}
+          </li>
+        </ul>
+      </div>
+    </div>
+  </ng-container>
+</div>

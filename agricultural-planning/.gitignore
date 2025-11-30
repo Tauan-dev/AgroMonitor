@@ -1,0 +1,85 @@
+# .gitignore para o projeto agricultural-planning
+# Ignora artefatos do frontend (Angular/Node) e do backend (Python), IDEs e arquivos do sistema
+
+# Node / Angular (frontend)
+frontend/node_modules/
+frontend/dist/
+frontend/out-tsc/
+frontend/.angular/
+frontend/.sass-cache/
+frontend/.ng_build_
+
+# Root-level Node artifacts (se houver pacotes no root)
+node_modules/
+npm-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build outputs
+dist/
+build/
+coverage/
+reports/
+
+# Python (backend)
+backend/.venv/
+backend/venv/
+backend/env/
+backend/__pycache__/
+backend/*.py[cod]
+backend/*.pyo
+backend/*.pyc
+backend/.Python
+backend/.pytest_cache/
+
+# Common Python files
+venv/
+ENV/
+env/
+*.py[cod]
+__pycache__/
+*.sqlite3
+*.db
+*.egg-info/
+build/
+develop-eggs/
+.eggs/
+dist/
+eggs/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Environment variables
+.env
+.env.*
+.secrets
+
+# Editor directories and files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Ignore server build output / temporary files
+*/.cache/
+*/.history/
+*.tmp
+
+# Others
+*.key
