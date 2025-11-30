@@ -1,8 +1,15 @@
-import { Component } from '@angular/core';
+import {
+  Component,
+  Pipe,
+  PipeTransform,
+  ViewEncapsulation,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { DomSanitizer } from '@angular/platform-browser';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { trigger, transition, style, animate } from '@angular/animations';
+
 import { AnalysisService } from '../../services/analysis.service';
 import {
   AnalysisInterpreterService,
@@ -10,26 +17,39 @@ import {
 } from '../../services/analysis-interpreter.service';
 import { ModelInput, AnalysisOutput } from '../../models/analysis.model';
 
-// Pipe para renderizar HTML seguro
-import { Pipe, PipeTransform } from '@angular/core';
-
+/* ========= PIPE STANDALONE PARA HTML SEGURO ========= */
 @Pipe({
   name: 'safe',
   standalone: true,
 })
 export class SafePipe implements PipeTransform {
   constructor(private sanitizer: DomSanitizer) {}
-  transform(value: string) {
+
+  transform(value: string | null | undefined): SafeHtml {
+    if (!value) return '';
     return this.sanitizer.bypassSecurityTrustHtml(value);
   }
 }
 
+/* ========= COMPONENTE STANDALONE PRINCIPAL ========= */
 @Component({
   selector: 'app-analysis',
   standalone: true,
   imports: [CommonModule, FormsModule, HttpClientModule, SafePipe],
   templateUrl: './analysis.component.html',
   styleUrls: ['./analysis.component.css'],
+  encapsulation: ViewEncapsulation.None, // ← CRÍTICO: Desabilita encapsulamento de estilos
+  animations: [
+    trigger('fadeIn', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateY(10px)' }),
+        animate(
+          '300ms ease-out',
+          style({ opacity: 1, transform: 'translateY(0)' })
+        ),
+      ]),
+    ]),
+  ],
 })
 export class AnalysisComponent {
   loading = false;
@@ -37,6 +57,7 @@ export class AnalysisComponent {
   error: string | null = null;
   interpretedResult: InterpretedAnalysis | null = null;
 
+  // Dados de entrada do modelo
   input: ModelInput = {
     resources: ['Terra', 'Mão de obra', 'Água', 'Fertilizante'],
     crops: ['Milho', 'Soja', 'Trigo'],
@@ -61,34 +82,54 @@ export class AnalysisComponent {
     this.error = null;
     this.interpretedResult = null;
 
-    this.analysisService.analyze(this.input).subscribe(
-      (data) => {
-        console.log('API Response:', data);
+    console.log('🔬 Iniciando análise com dados:', this.input);
+
+    this.analysisService.analyze(this.input).subscribe({
+      next: (data: AnalysisOutput) => {
+        console.log('✅ Resposta da API:', data);
         this.result = data;
 
-        // NOVO: Interpretar resultados com Ciência de Dados
+        // Gera insights interpretados
         this.interpretedResult = this.interpreterService.interpret(
           data,
           this.input.crops,
           this.input.resources
         );
-        console.log('Interpretação:', this.interpretedResult);
+        console.log('✅ Interpretação gerada:', this.interpretedResult);
 
         this.loading = false;
       },
-      (err) => {
-        console.error('API Error:', err);
-        this.error = err.error?.detail || 'Erro na análise';
+      error: (err) => {
+        console.error('❌ Erro na API:', err);
+        this.error =
+          err.error?.detail ||
+          err.message ||
+          'Erro ao conectar com o servidor. Verifique se o backend está rodando em http://localhost:8000';
         this.loading = false;
-      }
-    );
+      },
+      complete: () => {
+        console.log('✅ Análise concluída com sucesso');
+      },
+    });
   }
 
   updatePerturbation(value: string): void {
-    this.input.rel_perturb = parseFloat(value);
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue) && numValue >= 0.01 && numValue <= 0.3) {
+      this.input.rel_perturb = numValue;
+      console.log(
+        `📊 Perturbação atualizada para: ${(numValue * 100).toFixed(1)}%`
+      );
+    }
   }
 
   get hasResult(): boolean {
     return this.result !== null;
+  }
+
+  clearResults(): void {
+    this.result = null;
+    this.interpretedResult = null;
+    this.error = null;
   }
 }

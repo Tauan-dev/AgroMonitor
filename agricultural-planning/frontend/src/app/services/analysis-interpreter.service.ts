@@ -103,11 +103,11 @@ export class AnalysisInterpreterService {
     const kappaIll = diagnostics?.kappa_ill || 0;
     const ratioCondition = kappaIll / (kappaWell + 1e-10);
 
-    let insight = `**Número de Condição (κ = ${kappa.toExponential(2)})**: `;
+    let insight = `Número de Condição (κ = ${kappa.toExponential(2)}): `;
 
     if (kappa < 1e2) {
       insight +=
-        'O sistema é numericamente estável. Pequenas perturbações em **b** resultam em pequenas mudanças em **x**. ';
+        'O sistema é numericamente estável. Pequenas perturbações em b resultam em pequenas mudanças em x. ';
     } else if (kappa < 1e4) {
       insight +=
         'O sistema tem instabilidade moderada. A propagação de erro é controlada, mas requer atenção em decisões críticas. ';
@@ -116,15 +116,13 @@ export class AnalysisInterpreterService {
         'O sistema é numericamente frágil. Erros pequenos em recursos podem amplificar significativamente as soluções. ';
     }
 
-    insight += `\n\n**Elasticidade: ||Δx||/||x|| = ${relDx.toExponential(
-      2
-    )}**: `;
+    insight += `\n\nElasticidade: ||Δx||/||x|| = ${relDx.toExponential(2)}: `;
     insight += `Uma mudança de 1% nos recursos causa aproximadamente ${(
       relDx * 100
     ).toFixed(2)}% de mudança nas áreas plantadas. `;
 
     insight +=
-      `\n\n**Comparação Bem vs Mal Condicionado**: Sistema bem condicionado (κ=${kappaWell.toExponential(
+      `\n\nComparação Bem vs Mal Condicionado: Sistema bem condicionado (κ=${kappaWell.toExponential(
         2
       )}) ` +
       `vs sistema mal condicionado (κ=${kappaIll.toExponential(
@@ -145,7 +143,7 @@ export class AnalysisInterpreterService {
     result: AnalysisOutput
   ): string {
     return (
-      `**Interpretação Agrícola**: \n\n` +
+      `Interpretação Agrícola: \n\n` +
       `O plano otimizado sugere alocação de áreas baseado no retorno marginal de cada cultura sob os recursos ` +
       `disponíveis (terra, mão de obra, água, fertilizante). \n\n` +
       `A sensibilidade observada (${result.rel_dx.toExponential(
@@ -163,7 +161,7 @@ export class AnalysisInterpreterService {
     profitBase: number,
     profitPertPessimistic: number
   ): string {
-    let diagnosis = `**Diagnóstico Preditivo**:\n\n`;
+    let diagnosis = `Diagnóstico Preditivo:\n\n`;
 
     // compute elasticity in percent between base and pessimistic profit
     const elasticityPercent = this.calculateElasticity(
@@ -172,13 +170,13 @@ export class AnalysisInterpreterService {
     );
 
     if (kappa < 1e2) {
-      diagnosis += `✓ **Tendência**: Sistema previsível e robusto. Comportamento linear esperado em perturbações até ~10-15%.\n`;
-      diagnosis += `✓ **Projeção**: Reduções de 5% em recursos devem resultar em redução ~${(
+      diagnosis += `✓ Tendência: Sistema previsível e robusto. Comportamento linear esperado em perturbações até ~10-15%.\n`;
+      diagnosis += `✓ Projeção: Reduções de 5% em recursos devem resultar em redução ~${(
         relDx * 5
       ).toFixed(2)}% nas áreas.\n`;
     } else if (kappa < 1e4) {
-      diagnosis += `⚠ **Tendência**: Instabilidade moderada. Comportamento linear mantém-se até ~5-8% de perturbação.\n`;
-      diagnosis += `⚠ **Projeção**: Reduções de 5% em recursos podem resultar em redução ${(
+      diagnosis += `⚠ Tendência: Instabilidade moderada. Comportamento linear mantém-se até ~5-8% de perturbação.\n`;
+      diagnosis += `⚠ Projeção: Reduções de 5% em recursos podem resultar em redução ${(
         relDx *
         5 *
         1.5
@@ -186,16 +184,16 @@ export class AnalysisInterpreterService {
         2
       )}% nas áreas (amplificação de erro).\n`;
     } else {
-      diagnosis += `🔴 **Tendência**: Sistema frágil. Comportamento linear pode quebrar rapidamente com perturbações > 2-3%.\n`;
-      diagnosis += `🔴 **Projeção**: Pequenas mudanças em insumos podem causar mudanças desproporcionais e impredizíveis no plano.\n`;
+      diagnosis += `🔴 Tendência: Sistema frágil. Comportamento linear pode quebrar rapidamente com perturbações > 2-3%.\n\n`;
+      diagnosis += `🔴 Projeção: Pequenas mudanças em insumos podem causar mudanças desproporcionais e impredizíveis no plano.\n`;
     }
 
-    diagnosis += `\n**Intervalo de Risco Aproximado**: Perturbações até ${Math.min(
+    diagnosis += `\nIntervalo de Risco Aproximado: Perturbações até ${Math.min(
       10,
       Math.max(2, 100 / kappa)
     ).toFixed(1)}% são seguras para planejamento linear.`;
 
-    diagnosis += `\n\n**Elasticidade de Lucro (pessimista vs base)**: ${elasticityPercent.toFixed(
+    diagnosis += `\n\nElasticidade de Lucro (pessimista vs base): ${elasticityPercent.toFixed(
       2
     )}% de variação no lucro entre o cenário base e o pessimistico.`;
 

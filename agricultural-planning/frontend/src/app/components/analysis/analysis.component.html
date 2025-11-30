@@ -1,356 +1,417 @@
-<div class="container">
-  <h1>Análise de Planejamento Agrícola</h1>
-
-  <!-- PARÂMETROS -->
-  <div class="input-section">
-    <h2>Parâmetros</h2>
-    <p>
-      Observando os parametros de analise, temos 5% como nossa base de
-      comparação.
-    </p>
-    <div class="form-group">
-      <label>Perturbação Relativa (%)</label>
-      <input
-        type="range"
-        min="0.01"
-        max="0.30"
-        step="0.01"
-        [value]="input.rel_perturb"
-        (change)="updatePerturbation($any($event.target).value)"
-      />
-      <span>{{ (input.rel_perturb * 100).toFixed(1) }}%</span>
-    </div>
-
-    <button (click)="analyze()" [disabled]="loading" class="btn-primary">
-      {{ loading ? "Analisando..." : "Executar Análise" }}
-    </button>
-  </div>
-
-  <!-- ERRO -->
-  <div *ngIf="error" class="alert alert-error">
-    {{ error }}
-  </div>
-
-  <!-- RESULTADOS (só se houver result) -->
-  <ng-container *ngIf="result as r">
-    <div class="results-section">
-      <h2>Resultados</h2>
-
-      <!-- MÉTRICAS -->
-      <!-- LUCRO ESTIMADO (3 CARDS SEPARADOS) -->
-      <div class="metrics profits-section">
-        <!-- CARD 1: LUCRO BASE -->
-        <div class="metric-card profit-card profit-base">
-          <h3>💰 Lucro Base (Cenário Atual)</h3>
-          <p class="value profit-value">
-            {{
-              r.profit_base !== undefined
-                ? r.profit_base.toLocaleString("pt-BR", {
-                    maximumFractionDigits: 2
-                  })
-                : ""
-            }}
-          </p>
-          <p class="profit-label">Lucro com recursos atuais</p>
-          <div class="profit-icon">📊</div>
-        </div>
-
-        <!-- CARD 2: LUCRO PESSIMISTA -->
-        <div class="metric-card profit-card profit-pessimistic">
-          <h3>⚠️ Cenário Pessimista</h3>
-          <p class="value profit-value profit-loss">
-            {{
-              r.profit_pert_pessimistic !== undefined
-                ? r.profit_pert_pessimistic.toLocaleString("pt-BR", {
-                    maximumFractionDigits: 2
-                  })
-                : ""
-            }}
-          </p>
-          <p class="profit-label">
-            Redução de {{ (input.rel_perturb * 100).toFixed(1) }}% em recursos
-          </p>
-          <p class="profit-impact">
-            Impacto:
-            <span
-              [class]="
-                r.profit_pert_pessimistic < r.profit_base
-                  ? 'negative'
-                  : 'positive'
-              "
-            >
-              {{
-                (
-                  ((r.profit_pert_pessimistic - r.profit_base) /
-                    r.profit_base) *
-                  100
-                ).toFixed(1)
-              }}%
-            </span>
-          </p>
-        </div>
-
-        <!-- CARD 3: LUCRO OTIMISTA -->
-        <div class="metric-card profit-card profit-optimistic">
-          <h3>✅ Cenário Otimista</h3>
-          <p class="value profit-value profit-gain">
-            {{
-              r.profit_pert_optimistic !== undefined
-                ? r.profit_pert_optimistic.toLocaleString("pt-BR", {
-                    maximumFractionDigits: 2
-                  })
-                : ""
-            }}
-          </p>
-          <p class="profit-label">
-            Aumento de {{ (input.rel_perturb * 100).toFixed(1) }}% em recursos
-          </p>
-          <p class="profit-impact">
-            Ganho:
-            <span class="positive">
-              {{
-                (
-                  ((r.profit_pert_optimistic - r.profit_base) / r.profit_base) *
-                  100
-                ).toFixed(1)
-              }}%
-            </span>
-          </p>
-        </div>
+<div class="agromilho-dashboard">
+  <!-- ===== HEADER HERO ===== -->
+  <header class="dashboard-header">
+    <div class="header-content">
+      <div class="header-left">
+        <h1 class="header-title">
+          <span class="brand-accent">AGRO</span><span class="brand-main">ANÁLISE</span>
+        </h1>
+        <p class="header-subtitle">Análise de Planejamento Agrícola com Sensibilidade Numérica</p>
       </div>
-
-      <!-- CARDS DE CONDICIONAMENTO E SENSIBILIDADE (COM EXPLICAÇÕES) -->
-      <div class="metrics metrics-explained">
-        <!-- CARD: CONDICIONAMENTO -->
-        <div class="metric-card metric-explained">
-          <h3>🔢 Número de Condição (κ)</h3>
-          <p class="value metric-value">
-            {{ r.kappa !== undefined ? r.kappa.toExponential(2) : "" }}
-          </p>
-          <p
-            class="condition-status"
-            [class]="
-              r.kappa < 1e2 ? 'well' : r.kappa < 1e4 ? 'moderate' : 'ill'
-            "
-          >
-            {{
-              r.kappa < 1e2
-                ? "✓ Bem Condicionado"
-                : r.kappa < 1e4
-                ? "⚠ Moderado"
-                : "🔴 Mal Condicionado"
-            }}
-          </p>
-          <div class="explanation">
-            <p>
-              <strong>O que é?</strong> Mede a estabilidade numérica do sistema.
-              Valores baixos = sistema robusto; valores altos = sistema frágil.
-            </p>
-            <p>
-              <strong>Interpretação:</strong>
-              <span *ngIf="r.kappa < 1e2"
-                >Pequenos erros em recursos causam pequenos erros nas
-                soluções.</span
-              >
-              <span *ngIf="r.kappa >= 1e2 && r.kappa < 1e4"
-                >Erros moderados podem ser amplificados na solução.</span
-              >
-              <span *ngIf="r.kappa >= 1e4"
-                >Erros pequenos podem resultar em mudanças grandes e
-                impredizíveis.</span
-              >
-            </p>
-          </div>
+      <div class="header-right">
+        <div class="status-badge status-ready">
+          <span class="status-dot"></span>
+          {{ loading ? 'Processando...' : 'Pronto para Análise' }}
         </div>
-
-        <!-- CARD: SENSIBILIDADE -->
-        <div class="metric-card metric-explained">
-          <h3>📈 Sensibilidade (||Δx||/||x||)</h3>
-          <p class="value metric-value">
-            {{ r.rel_dx !== undefined ? r.rel_dx.toExponential(2) : "" }}
-          </p>
-          <p class="sensitivity-label">
-            Mudança de 1% em recursos → {{ (r.rel_dx * 100).toFixed(2) }}% em
-            áreas
-          </p>
-          <div class="explanation">
-            <p>
-              <strong>O que é?</strong> Mede quanto as áreas plantadas mudam
-              quando os recursos variam 1%.
-            </p>
-            <p>
-              <strong>Interpretação:</strong>
-              <span *ngIf="r.rel_dx < 0.5"
-                >Plano é resiliente; mudanças pequenas em insumos afetam pouco o
-                plano.</span
-              >
-              <span *ngIf="r.rel_dx >= 0.5 && r.rel_dx < 2"
-                >Plano tem sensibilidade moderada; mudanças em insumos exigem
-                ajustes.</span
-              >
-              <span *ngIf="r.rel_dx >= 2"
-                >Plano é sensível; variações pequenas em recursos requerem
-                replaneamento frequente.</span
-              >
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- GRÁFICOS (SEÇÃO PROFISSIONAL) -->
-      <div class="charts-container">
-        <h2
-          style="
-            font-size: 18px;
-            font-weight: 600;
-            margin: 30px 0 20px 0;
-            color: var(--color-text);
-          "
-        >
-          📊 Análise Visual
-        </h2>
-
-        <div class="charts">
-          <div class="chart">
-            <h3>Mapa de Sensibilidade</h3>
-            <img
-              *ngIf="r.heatmap"
-              [src]="'data:image/png;base64,' + r.heatmap"
-              alt="Heatmap de Sensibilidade"
-            />
-          </div>
-
-          <div class="chart">
-            <h3>Cenários de Produção</h3>
-            <img
-              *ngIf="r.comparison"
-              [src]="'data:image/png;base64,' + r.comparison"
-              alt="Comparação Base vs Perturbado"
-            />
-          </div>
-
-          <div class="chart">
-            <h3>Estabilidade Numérica</h3>
-            <img
-              *ngIf="r.sensitivity"
-              [src]="'data:image/png;base64,' + r.sensitivity"
-              alt="Sensibilidade Bem vs Mal Condicionado"
-            />
-          </div>
-
-          <div class="chart">
-            <h3>Otimização via Regularização</h3>
-            <img
-              *ngIf="r.regularization"
-              [src]="'data:image/png;base64,' + r.regularization"
-              alt="Normal vs Regularizado"
-            />
-          </div>
-        </div>
-      </div>
-
-      <!-- DIAGNÓSTICOS -->
-      <div class="diagnostics" *ngIf="r.diagnostics as d">
-        <h3>Diagnósticos</h3>
-        <ul>
-          <li>
-            κ(bem) =
-            {{
-              d.kappa_well !== undefined ? d.kappa_well.toExponential(2) : ""
-            }}
-          </li>
-          <li>
-            κ(mal) =
-            {{ d.kappa_ill !== undefined ? d.kappa_ill.toExponential(2) : "" }}
-          </li>
-          <li>
-            ||Δx||/||x|| (bem) =
-            {{
-              d.rel_dx_well !== undefined ? d.rel_dx_well.toExponential(2) : ""
-            }}
-          </li>
-          <li>
-            ||Δx||/||x|| (mal) =
-            {{
-              d.rel_dx_ill !== undefined ? d.rel_dx_ill.toExponential(2) : ""
-            }}
-          </li>
-        </ul>
       </div>
     </div>
-  </ng-container>
-  <!-- INSIGHTS INTELIGENTES (NOVA SEÇÃO) -->
-  <ng-container *ngIf="interpretedResult as interp">
-    <div class="insights-section">
-      <h2>📊 Insights Inteligentes com IA</h2>
+  </header>
 
-      <!-- RESUMO INTUITIVO -->
-      <div class="insight-card insight-summary">
-        <h3>📝 Resumo Intuitivo</h3>
-        <p class="insight-text">{{ interp.summary }}</p>
-      </div>
+  <!-- ===== MAIN CONTAINER ===== -->
+  <div class="dashboard-container">
 
-      <!-- ANÁLISE DE CIÊNCIA DE DADOS -->
-      <div class="insight-card insight-data-science">
-        <h3>🔬 Análise de Ciência de Dados</h3>
-        <div
-          class="insight-text"
-          [innerHTML]="interp.dataScienceInsight | safe"
-        ></div>
-      </div>
+    <!-- ===== SEÇÃO 1: FILTROS E PARÂMETROS (HERO COMPACTO) ===== -->
+    <section class="params-hero">
+      <div class="params-inner">
+        <div class="params-left">
+          <h2 class="params-title">🎯 Configurar Análise</h2>
+          <p class="params-description">
+            Ajuste a perturbação relativa para analisar robustez do planejamento agrícola
+          </p>
+        </div>
 
-      <!-- CONTEXTO AGRÍCOLA -->
-      <div class="insight-card insight-agriculture">
-        <h3>🌾 Contexto Agrícola</h3>
-        <p class="insight-text">{{ interp.agriculturalContext }}</p>
-      </div>
+        <div class="params-controls">
+          <div class="slider-group">
+            <label class="slider-label">
+              Perturbação Relativa
+              <span class="slider-value-badge">{{ (input.rel_perturb * 100).toFixed(1) }}%</span>
+            </label>
+            <input
+              type="range"
+              min="0.01"
+              max="0.30"
+              step="0.01"
+              [value]="input.rel_perturb"
+              (change)="updatePerturbation($any($event.target).value)"
+              class="slider-input"
+            />
+            <div class="slider-markers">
+              <span>0.1%</span>
+              <span>15%</span>
+              <span>30%</span>
+            </div>
+          </div>
 
-      <!-- DIAGNÓSTICO PREDITIVO -->
-      <div class="insight-card insight-predictive">
-        <h3>🔮 Diagnóstico Preditivo</h3>
-        <div
-          class="insight-text"
-          [innerHTML]="interp.predictiveDiagnosis | safe"
-        ></div>
-      </div>
-
-      <!-- RECOMENDAÇÕES TÉCNICAS -->
-      <div class="insight-card insight-recommendations">
-        <h3>✅ Recomendações Técnicas</h3>
-        <ul class="recommendations-list">
-          <li
-            *ngFor="let rec of interp.recommendations"
-            class="recommendation-item"
+          <button
+            (click)="analyze()"
+            [disabled]="loading"
+            class="btn-analyze"
+            [class.btn-loading]="loading"
           >
-            {{ rec }}
-          </li>
-        </ul>
+            <span class="btn-icon">{{ loading ? '⏳' : '▶' }}</span>
+            <span class="btn-text">{{ loading ? 'Analisando...' : 'Executar Análise' }}</span>
+          </button>
+        </div>
       </div>
+    </section>
 
-      <!-- ALERTAS DE RISCO -->
-      <div
-        *ngIf="interp.riskFlags.length > 0"
-        class="insight-card insight-risks"
-      >
-        <h3>⚠️ Alertas de Risco</h3>
-        <div class="risk-flags-container">
-          <div
-            *ngFor="let flag of interp.riskFlags"
-            [class]="'risk-flag risk-flag-' + flag.level"
-          >
-            <span class="risk-icon">
-              {{
-                flag.level === "critical"
-                  ? "🔴"
-                  : flag.level === "warning"
-                  ? "⚠️"
-                  : "ℹ️"
+    <!-- ===== ALERTAS DE ERRO ===== -->
+    <div *ngIf="error" class="alert-container alert-error-container">
+      <div class="alert-content">
+        <span class="alert-icon">⚠️</span>
+        <div class="alert-text">
+          <strong>Erro na Análise</strong>
+          <p>{{ error }}</p>
+          <p style="font-size: 12px; margin-top: 8px; color: #999;">
+            💡 Verifique se o backend está rodando em http://localhost:8000
+          </p>
+        </div>
+        <button class="alert-close" (click)="error = null">✕</button>
+      </div>
+    </div>
+
+    <!-- ===== DEBUG: Mostrar se result foi preenchido ===== -->
+    <div *ngIf="hasResult" style="background: #e8f5e9; padding: 12px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #4caf50;">
+      <p style="margin: 0; color: #2e7d32; font-weight: 600;">✅ Dados carregados com sucesso!</p>
+    </div>
+
+    <!-- ===== RESULTADOS DINÂMICOS ===== -->
+    <ng-container *ngIf="result as r">
+
+      <!-- ===== KPI CARDS (LUCROS) ===== -->
+      <section class="kpi-section">
+        <h2 class="section-title">💰 Cenários de Lucro</h2>
+
+        <div class="kpi-grid kpi-three-column">
+
+          <!-- CARD 1: BASE -->
+          <div class="kpi-card kpi-base" [@fadeIn]>
+            <div class="kpi-header">
+              <span class="kpi-icon">📊</span>
+              <span class="kpi-badge badge-info">Base</span>
+            </div>
+            <div class="kpi-value">
+              R$ {{
+                r.profit_base !== undefined && r.profit_base !== null
+                  ? r.profit_base.toLocaleString('pt-BR', { maximumFractionDigits: 0 })
+                  : '—'
               }}
-            </span>
-            <span class="risk-message">{{ flag.message }}</span>
+            </div>
+            <div class="kpi-label">Cenário Atual com Recursos Existentes</div>
+            <div class="kpi-footer">
+              <span class="kpi-meta">Referência de análise</span>
+            </div>
           </div>
+
+          <!-- CARD 2: PESSIMISTA -->
+          <div class="kpi-card kpi-pessimistic" [@fadeIn]>
+            <div class="kpi-header">
+              <span class="kpi-icon">⚠️</span>
+              <span class="kpi-badge badge-danger">Risco</span>
+            </div>
+            <div class="kpi-value">
+              R$ {{
+                r.profit_pert_pessimistic !== undefined && r.profit_pert_pessimistic !== null
+                  ? r.profit_pert_pessimistic.toLocaleString('pt-BR', { maximumFractionDigits: 0 })
+                  : '—'
+              }}
+            </div>
+            <div class="kpi-label">
+              Recursos Reduzidos em {{ (input.rel_perturb * 100).toFixed(1) }}%
+            </div>
+            <div class="kpi-footer" *ngIf="r.profit_base">
+              <span class="kpi-change negative">
+                {{ ((r.profit_pert_pessimistic - r.profit_base) / r.profit_base * 100).toFixed(1) }}%
+              </span>
+              <span class="kpi-meta">impacto negativo</span>
+            </div>
+          </div>
+
+          <!-- CARD 3: OTIMISTA -->
+          <div class="kpi-card kpi-optimistic" [@fadeIn]>
+            <div class="kpi-header">
+              <span class="kpi-icon">✅</span>
+              <span class="kpi-badge badge-success">Oportunidade</span>
+            </div>
+            <div class="kpi-value">
+              R$ {{
+                r.profit_pert_optimistic !== undefined && r.profit_pert_optimistic !== null
+                  ? r.profit_pert_optimistic.toLocaleString('pt-BR', { maximumFractionDigits: 0 })
+                  : '—'
+              }}
+            </div>
+            <div class="kpi-label">
+              Recursos Aumentados em {{ (input.rel_perturb * 100).toFixed(1) }}%
+            </div>
+            <div class="kpi-footer" *ngIf="r.profit_base">
+              <span class="kpi-change positive">
+                {{ ((r.profit_pert_optimistic - r.profit_base) / r.profit_base * 100).toFixed(1) }}%
+              </span>
+              <span class="kpi-meta">ganho potencial</span>
+            </div>
+          </div>
+
         </div>
-      </div>
-    </div>
-  </ng-container>
+      </section>
+
+      <!-- ===== ANÁLISE TÉCNICA (MÉTRICOS) ===== -->
+      <section class="metrics-section">
+        <h2 class="section-title">🔬 Análise Técnica</h2>
+
+        <div class="metrics-grid metrics-two-column">
+
+          <!-- CARD: CONDICIONAMENTO -->
+          <div class="metric-card metric-condition" [@fadeIn]>
+            <div class="metric-header">
+              <h3 class="metric-title">Número de Condição (κ)</h3>
+              <div
+                class="condition-badge"
+                [class]="
+                  r.kappa < 1e2 ? 'well-conditioned'
+                  : r.kappa < 1e4 ? 'moderately-conditioned'
+                  : 'ill-conditioned'
+                "
+              >
+                {{
+                  r.kappa < 1e2 ? '✓ Bem Condicionado'
+                  : r.kappa < 1e4 ? '⚠ Moderado'
+                  : '🔴 Mal Condicionado'
+                }}
+              </div>
+            </div>
+
+            <div class="metric-value-large">
+              {{ r.kappa !== undefined && r.kappa !== null ? r.kappa.toExponential(2) : '—' }}
+            </div>
+
+            <div class="metric-explanation">
+              <div class="explanation-item">
+                <strong class="exp-title">O que é?</strong>
+                <p class="exp-text">Mede a estabilidade numérica do sistema. Valores baixos = sistema robusto; valores altos = sistema frágil.</p>
+              </div>
+
+              <div class="explanation-item">
+                <strong class="exp-title">Interpretação:</strong>
+                <p class="exp-text">
+                  <span *ngIf="r.kappa < 1e2" class="exp-highlight well-highlight">
+                    ✓ Pequenos erros em recursos causam pequenos erros nas soluções. Sistema muito estável.
+                  </span>
+                  <span *ngIf="r.kappa >= 1e2 && r.kappa < 1e4" class="exp-highlight moderate-highlight">
+                    ⚠ Erros moderados podem ser amplificados na solução. Monitoramento recomendado.
+                  </span>
+                  <span *ngIf="r.kappa >= 1e4" class="exp-highlight ill-highlight">
+                    🔴 Erros pequenos podem resultar em mudanças grandes e impredizíveis. Alto risco numérico.
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- CARD: SENSIBILIDADE -->
+          <div class="metric-card metric-sensitivity" [@fadeIn]>
+            <div class="metric-header">
+              <h3 class="metric-title">Sensibilidade Relativa (||Δx||/||x||)</h3>
+              <div class="sensitivity-rate">
+                1% recursos →
+                <strong>{{ r.rel_dx !== undefined && r.rel_dx !== null ? (r.rel_dx * 100).toFixed(2) : '—' }}%</strong> áreas
+              </div>
+            </div>
+
+            <div class="metric-value-large metric-value-teal">
+              {{ r.rel_dx !== undefined && r.rel_dx !== null ? r.rel_dx.toExponential(2) : '—' }}
+            </div>
+
+            <div class="metric-explanation">
+              <div class="explanation-item">
+                <strong class="exp-title">O que é?</strong>
+                <p class="exp-text">Mede quanto as áreas plantadas mudam quando os recursos variam 1%. Indicador de resiliência do plano.</p>
+              </div>
+
+              <div class="explanation-item">
+                <strong class="exp-title">Interpretação:</strong>
+                <p class="exp-text">
+                  <span *ngIf="r.rel_dx < 0.5" class="exp-highlight well-highlight">
+                    ✓ Plano é resiliente; mudanças pequenas em insumos afetam pouco o plano.
+                  </span>
+                  <span *ngIf="r.rel_dx >= 0.5 && r.rel_dx < 2" class="exp-highlight moderate-highlight">
+                    ⚠ Plano tem sensibilidade moderada; mudanças em insumos exigem ajustes estratégicos.
+                  </span>
+                  <span *ngIf="r.rel_dx >= 2" class="exp-highlight ill-highlight">
+                    🔴 Plano é sensível; variações pequenas em recursos requerem replaneamento frequente.
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ===== VISUALIZAÇÕES ===== -->
+      <section class="charts-section">
+        <h2 class="section-title">📊 Análise Visual & Gráficos</h2>
+
+        <div class="charts-grid charts-four-column">
+
+          <div class="chart-card" [@fadeIn]>
+            <div class="chart-header">
+              <h3 class="chart-title">Mapa de Sensibilidade</h3>
+              <span class="chart-meta">Recurso × Cultura</span>
+            </div>
+            <div class="chart-body">
+              <img
+                *ngIf="r.heatmap"
+                [src]="'data:image/png;base64,' + r.heatmap"
+                alt="Heatmap de Sensibilidade"
+                loading="lazy"
+              />
+              <p *ngIf="!r.heatmap" style="color: #999;">Gráfico não disponível</p>
+            </div>
+          </div>
+
+          <div class="chart-card" [@fadeIn]>
+            <div class="chart-header">
+              <h3 class="chart-title">Cenários de Produção</h3>
+              <span class="chart-meta">Base vs Perturbado</span>
+            </div>
+            <div class="chart-body">
+              <img
+                *ngIf="r.comparison"
+                [src]="'data:image/png;base64,' + r.comparison"
+                alt="Comparação Base vs Perturbado"
+                loading="lazy"
+              />
+              <p *ngIf="!r.comparison" style="color: #999;">Gráfico não disponível</p>
+            </div>
+          </div>
+
+          <div class="chart-card" [@fadeIn]>
+            <div class="chart-header">
+              <h3 class="chart-title">Estabilidade Numérica</h3>
+              <span class="chart-meta">Bem vs Mal Condicionado</span>
+            </div>
+            <div class="chart-body">
+              <img
+                *ngIf="r.sensitivity"
+                [src]="'data:image/png;base64,' + r.sensitivity"
+                alt="Sensibilidade Bem vs Mal Condicionado"
+                loading="lazy"
+              />
+              <p *ngIf="!r.sensitivity" style="color: #999;">Gráfico não disponível</p>
+            </div>
+          </div>
+
+          <div class="chart-card" [@fadeIn]>
+            <div class="chart-header">
+              <h3 class="chart-title">Regularização</h3>
+              <span class="chart-meta">Normal vs Otimizada</span>
+            </div>
+            <div class="chart-body">
+              <img
+                *ngIf="r.regularization"
+                [src]="'data:image/png;base64,' + r.regularization"
+                alt="Normal vs Regularizado"
+                loading="lazy"
+              />
+              <p *ngIf="!r.regularization" style="color: #999;">Gráfico não disponível</p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ===== INSIGHTS COM IA ===== -->
+      <ng-container *ngIf="interpretedResult as interp">
+        <section class="insights-section">
+          <h2 class="section-title">🤖 Insights Inteligentes com IA</h2>
+
+          <!-- RESUMO INTUITIVO -->
+          <div class="insight-card insight-summary-card" [@fadeIn]>
+            <div class="insight-header">
+              <span class="insight-icon">📝</span>
+              <h3 class="insight-title">Resumo Executivo</h3>
+            </div>
+            <p class="insight-text">{{ interp.summary }}</p>
+            <div class="insight-footer">
+              <span class="insight-confidence">Alta Confiança</span>
+            </div>
+          </div>
+
+          <!-- ANÁLISE TÉCNICA -->
+          <div class="insight-card insight-technical-card" [@fadeIn]>
+            <div class="insight-header">
+              <span class="insight-icon">🔬</span>
+              <h3 class="insight-title">Análise Técnica Detalhada</h3>
+            </div>
+            <div class="insight-text html-content" [innerHTML]="interp.dataScienceInsight | safe"></div>
+          </div>
+
+          <!-- CONTEXTO AGRÍCOLA -->
+          <div class="insight-card insight-agriculture-card" [@fadeIn]>
+            <div class="insight-header">
+              <span class="insight-icon">🌾</span>
+              <h3 class="insight-title">Recomendações Agrícolas</h3>
+            </div>
+            <p class="insight-text">{{ interp.agriculturalContext }}</p>
+          </div>
+
+          <!-- DIAGNÓSTICO PREDITIVO -->
+          <div class="insight-card insight-predictive-card" [@fadeIn]>
+            <div class="insight-header">
+              <span class="insight-icon">🔮</span>
+              <h3 class="insight-title">Diagnóstico Preditivo</h3>
+            </div>
+            <div class="insight-text html-content" [innerHTML]="interp.predictiveDiagnosis | safe"></div>
+          </div>
+
+          <!-- RECOMENDAÇÕES -->
+          <div class="insight-card insight-recommendations-card" [@fadeIn]>
+            <div class="insight-header">
+              <span class="insight-icon">✅</span>
+              <h3 class="insight-title">Recomendações Estratégicas</h3>
+            </div>
+            <ul class="recommendations-list">
+              <li *ngFor="let rec of interp.recommendations" class="recommendation-item">
+                <span class="rec-check">✓</span>
+                <span class="rec-text">{{ rec }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- ALERTAS DE RISCO -->
+          <div *ngIf="interp.riskFlags && interp.riskFlags.length > 0" class="insight-card insight-risks-card" [@fadeIn]>
+            <div class="insight-header">
+              <span class="insight-icon">⚠️</span>
+              <h3 class="insight-title">Alertas de Risco</h3>
+            </div>
+            <div class="risk-flags-container">
+              <div *ngFor="let flag of interp.riskFlags"
+                   [class]="'risk-flag risk-flag-' + flag.level">
+                <span class="risk-icon">
+                  {{ flag.level === 'critical' ? '🔴' : flag.level === 'warning' ? '⚠️' : 'ℹ️' }}
+                </span>
+                <div class="risk-content">
+                  <span class="risk-label">{{ flag.level | uppercase }}</span>
+                  <span class="risk-message">{{ flag.message }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </section>
+      </ng-container>
+
+    </ng-container>
+
+  </div>
 </div>
