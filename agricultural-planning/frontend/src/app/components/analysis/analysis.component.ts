@@ -38,7 +38,7 @@ export class SafePipe implements PipeTransform {
   imports: [CommonModule, FormsModule, HttpClientModule, SafePipe],
   templateUrl: './analysis.component.html',
   styleUrls: ['./analysis.component.css'],
-  encapsulation: ViewEncapsulation.None, // ← CRÍTICO: Desabilita encapsulamento de estilos
+  encapsulation: ViewEncapsulation.None,
   animations: [
     trigger('fadeIn', [
       transition(':enter', [
@@ -49,15 +49,28 @@ export class SafePipe implements PipeTransform {
         ),
       ]),
     ]),
+    trigger('slideIn', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateX(-20px)' }),
+        animate(
+          '500ms ease-out',
+          style({ opacity: 1, transform: 'translateX(0)' })
+        ),
+      ]),
+    ]),
   ],
 })
 export class AnalysisComponent {
-  loading = false;
+  // ===== NAVEGAÇÃO =====
+  showAnalysis: boolean = false;
+
+  // ===== ESTADO DA ANÁLISE =====
+  loading: boolean = false;
   result: AnalysisOutput | null = null;
   error: string | null = null;
   interpretedResult: InterpretedAnalysis | null = null;
 
-  // Dados de entrada do modelo
+  // ===== DADOS DE ENTRADA DO MODELO =====
   input: ModelInput = {
     resources: ['Terra', 'Mão de obra', 'Água', 'Fertilizante'],
     crops: ['Milho', 'Soja', 'Trigo'],
@@ -75,8 +88,36 @@ export class AnalysisComponent {
   constructor(
     private analysisService: AnalysisService,
     private interpreterService: AnalysisInterpreterService
-  ) {}
+  ) {
+    console.log('✅ AnalysisComponent inicializado');
+  }
 
+  // ===== MÉTODOS DE NAVEGAÇÃO =====
+
+  /**
+   * Navega para a página de análise
+   */
+  startAnalysis(): void {
+    this.showAnalysis = true;
+    console.log('🚀 Navegando para análise...');
+    window.scrollTo(0, 0);
+  }
+
+  /**
+   * Volta para a landing page
+   */
+  backToLanding(): void {
+    this.showAnalysis = false;
+    this.clearResults();
+    console.log('⬅️ Voltando para landing page...');
+    window.scrollTo(0, 0);
+  }
+
+  // ===== MÉTODOS DE ANÁLISE =====
+
+  /**
+   * Executa a análise chamando o backend
+   */
   analyze(): void {
     this.loading = true;
     this.error = null;
@@ -86,7 +127,7 @@ export class AnalysisComponent {
 
     this.analysisService.analyze(this.input).subscribe({
       next: (data: AnalysisOutput) => {
-        console.log('✅ Resposta da API:', data);
+        console.log('✅ Resposta da API recebida:', data);
         this.result = data;
 
         // Gera insights interpretados
@@ -95,7 +136,10 @@ export class AnalysisComponent {
           this.input.crops,
           this.input.resources
         );
-        console.log('✅ Interpretação gerada:', this.interpretedResult);
+        console.log(
+          '✅ Interpretação gerada com sucesso:',
+          this.interpretedResult
+        );
 
         this.loading = false;
       },
@@ -113,6 +157,9 @@ export class AnalysisComponent {
     });
   }
 
+  /**
+   * Atualiza o valor da perturbação relativa
+   */
   updatePerturbation(value: string): void {
     const numValue = parseFloat(value);
     if (!isNaN(numValue) && numValue >= 0.01 && numValue <= 0.3) {
@@ -123,13 +170,20 @@ export class AnalysisComponent {
     }
   }
 
+  /**
+   * Verifica se há resultados disponíveis
+   */
   get hasResult(): boolean {
     return this.result !== null;
   }
 
+  /**
+   * Limpa todos os resultados e erros
+   */
   clearResults(): void {
     this.result = null;
     this.interpretedResult = null;
     this.error = null;
+    console.log('🧹 Resultados limpos');
   }
 }
